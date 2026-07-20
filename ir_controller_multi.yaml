@@ -267,27 +267,25 @@ switch:
               case 16: ((IRSharpAc*)id(ac))->on();       break;
               }
             switch (id(ac_protocol).active_index().value_or(0)) {
-              switch (id(ac_protocol).active_index().value_or(0)) {
-                case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
-                case 1:  ((IRGreeAC*)id(ac))->send();        break;
-                case 2:  ((IRMideaAC*)id(ac))->send();       break;
-                case 3:  ((IRDaikinESP*)id(ac))->send();     break;
-                case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
-                case 5:  ((IRLgAc*)id(ac))->send();          break;
-                case 6:  ((IRSamsungAc*)id(ac))->send();     break;
-                case 7:  ((IRToshibaAC*)id(ac))->send();     break;
-                case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
-                case 9:  ((IRHitachiAc*)id(ac))->send();     break;
-                case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
-                case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
-                case 12: ((IRHaierAC*)id(ac))->send();       break;
-                case 13: ((IRTcl112Ac*)id(ac))->send();      break;
-                case 14: ((IRCoolixAC*)id(ac))->send();      break;
-                case 15: ((IRCarrierAc64*)id(ac))->send();   break;
-                case 16: ((IRSharpAc*)id(ac))->send();       break;
-                case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
-              }
-            };
+              case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
+              case 1:  ((IRGreeAC*)id(ac))->send();        break;
+              case 2:  ((IRMideaAC*)id(ac))->send();       break;
+              case 3:  ((IRDaikinESP*)id(ac))->send();     break;
+              case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
+              case 5:  ((IRLgAc*)id(ac))->send();          break;
+              case 6:  ((IRSamsungAc*)id(ac))->send();     break;
+              case 7:  ((IRToshibaAC*)id(ac))->send();     break;
+              case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
+              case 9:  ((IRHitachiAc*)id(ac))->send();     break;
+              case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
+              case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
+              case 12: ((IRHaierAC*)id(ac))->send();       break;
+              case 13: ((IRTcl112Ac*)id(ac))->send();      break;
+              case 14: ((IRCoolixAC*)id(ac))->send();      break;
+              case 15: ((IRCarrierAc64*)id(ac))->send();   break;
+              case 16: ((IRSharpAc*)id(ac))->send();       break;
+              case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
+            }
             ESP_LOGI("ac", "ON - Protocol: %s", id(ac_protocol).state.c_str());
           }
     turn_off_action:
@@ -312,27 +310,25 @@ switch:
               case 16: ((IRSharpAc*)id(ac))->off();       break;
               }
             switch (id(ac_protocol).active_index().value_or(0)) {
-              switch (id(ac_protocol).active_index().value_or(0)) {
-                case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
-                case 1:  ((IRGreeAC*)id(ac))->send();        break;
-                case 2:  ((IRMideaAC*)id(ac))->send();       break;
-                case 3:  ((IRDaikinESP*)id(ac))->send();     break;
-                case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
-                case 5:  ((IRLgAc*)id(ac))->send();          break;
-                case 6:  ((IRSamsungAc*)id(ac))->send();     break;
-                case 7:  ((IRToshibaAC*)id(ac))->send();     break;
-                case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
-                case 9:  ((IRHitachiAc*)id(ac))->send();     break;
-                case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
-                case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
-                case 12: ((IRHaierAC*)id(ac))->send();       break;
-                case 13: ((IRTcl112Ac*)id(ac))->send();      break;
-                case 14: ((IRCoolixAC*)id(ac))->send();      break;
-                case 15: ((IRCarrierAc64*)id(ac))->send();   break;
-                case 16: ((IRSharpAc*)id(ac))->send();       break;
-                case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
-              }
-            };
+              case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
+              case 1:  ((IRGreeAC*)id(ac))->send();        break;
+              case 2:  ((IRMideaAC*)id(ac))->send();       break;
+              case 3:  ((IRDaikinESP*)id(ac))->send();     break;
+              case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
+              case 5:  ((IRLgAc*)id(ac))->send();          break;
+              case 6:  ((IRSamsungAc*)id(ac))->send();     break;
+              case 7:  ((IRToshibaAC*)id(ac))->send();     break;
+              case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
+              case 9:  ((IRHitachiAc*)id(ac))->send();     break;
+              case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
+              case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
+              case 12: ((IRHaierAC*)id(ac))->send();       break;
+              case 13: ((IRTcl112Ac*)id(ac))->send();      break;
+              case 14: ((IRCoolixAC*)id(ac))->send();      break;
+              case 15: ((IRCarrierAc64*)id(ac))->send();   break;
+              case 16: ((IRSharpAc*)id(ac))->send();       break;
+              case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
+            }
             auto call = id(ac_timed_off).make_call();
             call.set_time("00:00:00");
             call.perform();

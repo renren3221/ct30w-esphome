@@ -119,4 +119,4 @@ ORVIBO-CT30W-ESPHome/
 ## 许可
 
 MIT License
-*（内容由AI生成，仅供参考）*
+

@@ -1,0 +1,840 @@
+# =============================================================================
+# ORVIBO CT30W ESPHome 多协议红外空调控制器
+# 基于 https://github.com/SrsKbtzw/ORVIBO-CT30W-ESPHome
+# 支持 18 种主流空调红外协议，通过下拉选择器切换测试
+# =============================================================================
+
+esphome:
+  name: ir-controller
+  build_path: C:\esphb
+  libraries:
+    - IRremoteESP8266
+  includes:
+    - ir_protocols.h
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          // 根据当前选中的协议创建对应的 AC 实例
+          switch (id(ac_protocol).active_index().value_or(0)) {
+            case 0:  id(ac) = new IRKelvinatorAC(id(ir_send_pin)); break;
+            case 1:  id(ac) = new IRGreeAC(id(ir_send_pin));       break;
+            case 2:  id(ac) = new IRMideaAC(id(ir_send_pin));      break;
+            case 3:  id(ac) = new IRDaikinESP(id(ir_send_pin));    break;
+            case 4:  id(ac) = new IRPanasonicAc(id(ir_send_pin));  break;
+            case 5:  id(ac) = new IRLgAc(id(ir_send_pin));         break;
+            case 6:  id(ac) = new IRSamsungAc(id(ir_send_pin));    break;
+            case 7:  id(ac) = new IRToshibaAC(id(ir_send_pin));    break;
+            case 8:  id(ac) = new IRFujitsuAC(id(ir_send_pin));    break;
+            case 9:  id(ac) = new IRHitachiAc(id(ir_send_pin));    break;
+            case 10: id(ac) = new IRMitsubishiAC(id(ir_send_pin)); break;
+            case 11: id(ac) = new IRMitsubishiHeavy152Ac(id(ir_send_pin)); break;
+            case 12: id(ac) = new IRHaierAC(id(ir_send_pin));      break;
+            case 13: id(ac) = new IRTcl112Ac(id(ir_send_pin));        break;
+            case 14: id(ac) = new IRCoolixAC(id(ir_send_pin));     break;
+            case 15: id(ac) = new IRCarrierAc64(id(ir_send_pin));    break;
+            case 16: id(ac) = new IRSharpAc(id(ir_send_pin));      break;
+            case 17: id(ac) = new IRWhirlpoolAc(id(ir_send_pin));  break;
+            default: id(ac) = new IRKelvinatorAC(id(ir_send_pin)); break;
+          }
+          ((IRsend*)id(ac))->begin();  // 初始化发射器
+
+          // 恢复上次状态
+          if (id(ac_power).state) {
+            switch (id(ac_protocol).active_index().value_or(0)) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
+              case 1:  ((IRGreeAC*)id(ac))->send();        break;
+              case 2:  ((IRMideaAC*)id(ac))->send();       break;
+              case 3:  ((IRDaikinESP*)id(ac))->send();     break;
+              case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
+              case 5:  ((IRLgAc*)id(ac))->send();          break;
+              case 6:  ((IRSamsungAc*)id(ac))->send();     break;
+              case 7:  ((IRToshibaAC*)id(ac))->send();     break;
+              case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
+              case 9:  ((IRHitachiAc*)id(ac))->send();     break;
+              case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
+              case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
+              case 12: ((IRHaierAC*)id(ac))->send();       break;
+              case 13: ((IRTcl112Ac*)id(ac))->send();      break;
+              case 14: ((IRCoolixAC*)id(ac))->send();      break;
+              case 15: ((IRCarrierAc64*)id(ac))->send();   break;
+              case 16: ((IRSharpAc*)id(ac))->send();       break;
+              case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
+            }
+          }
+
+          // --- IR 接收器初始化 ---
+          id(irrecv) = new IRrecv(id(ir_recv_pin), id(ir_recv_buf_size),
+                                  id(ir_recv_timeout), true);
+          ((IRrecv*)id(irrecv))->setUnknownThreshold(id(ir_recv_ignore));
+          ((IRrecv*)id(irrecv))->setTolerance(id(ir_recv_tolerance));
+          ((IRrecv*)id(irrecv))->enableIRIn();
+
+  on_shutdown:
+    priority: 700
+    then:
+      - lambda: |-
+          if (id(ac)) { delete (IRsend*)id(ac); id(ac) = nullptr; }
+          if (id(irrecv)) { delete (IRrecv*)id(irrecv); id(irrecv) = nullptr; }
+
+# --- 硬件平台 ---
+esp8266:
+  board: esp_wroom_02
+
+# --- 日志 ---
+logger:
+  level: INFO
+
+# --- Home Assistant API ---
+api:
+  encryption:
+    key: "YOUR_API_ENCRYPTION_KEY"
+
+# --- OTA ---
+ota:
+  - platform: esphome
+    password: ""
+
+# --- WiFi 配置 ---
+wifi:
+  ssid: "YOUR_WIFI_SSID"
+  password: "YOUR_WIFI_PASSWORD"
+  ap:
+    ssid: "Ir-Controller Fallback Hotspot"
+    password: ""
+
+captive_portal:
+
+# --- Web Server ---
+web_server:
+  port: 80
+  version: 3
+
+# --- 状态 LED ---
+status_led:
+  pin: 15
+
+# =============================================================================
+# 全局变量
+# =============================================================================
+globals:
+  - id: ir_send_pin
+    type: const uint16_t
+    restore_value: no
+    initial_value: "14"
+  - id: ir_recv_pin
+    type: const uint16_t
+    restore_value: no
+    initial_value: "5"
+  - id: ac
+    type: void *
+    restore_value: no
+    initial_value: "NULL"
+  - id: ac_off_time
+    type: ESPTime
+    restore_value: no
+    initial_value: "{0}"
+  - id: ir_recv_buf_size
+    type: uint16_t
+    restore_value: no
+    initial_value: "1024"
+  - id: ir_recv_timeout
+    type: uint8_t
+    restore_value: no
+    initial_value: "50"
+  - id: ir_recv_ignore
+    type: uint16_t
+    restore_value: no
+    initial_value: "12"
+  - id: ir_recv_tolerance
+    type: uint8_t
+    restore_value: no
+    initial_value: "25"
+  - id: irrecv
+    type: void *
+    restore_value: no
+    initial_value: "NULL"
+
+# =============================================================================
+# ==== 协议分发宏（减少重复代码）====
+# 每个 setter 都会根据 ac_protocol 分发到对应协议的方法
+# =============================================================================
+
+# --- IR 学码按键 ---
+binary_sensor:
+  - platform: gpio
+    id: ir_dump_pin
+    name: "IR dump"
+    icon: "mdi:record-rec"
+    pin:
+      number: 4
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 10ms
+    web_server:
+      sorting_weight: 12
+
+# --- IR 接收解码 ---
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          decode_results results;
+          if (id(ir_dump_pin).state && ((IRrecv*)id(irrecv))->decode(&results)) {
+            if (results.overflow) ESP_LOGW("ir_dump", "Buffer is full");
+            ESP_LOGI("ir_dump", "%s", resultToTimingInfo(&results).c_str());
+          }
+
+# =============================================================================
+# 协议切换事件：切换协议时重建 AC 实例
+# =============================================================================
+event:
+  - platform: template
+    event_types:
+      - "ac_conf_change"
+    name: "Apply AC configuration"
+    id: ac_apply_event
+    internal: true
+    on_event:
+      then:
+        - lambda: |-
+            if (id(ac) && id(ac_power).state) {
+              switch (id(ac_protocol).active_index().value_or(0)) {
+                case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
+                case 1:  ((IRGreeAC*)id(ac))->send();        break;
+                case 2:  ((IRMideaAC*)id(ac))->send();       break;
+                case 3:  ((IRDaikinESP*)id(ac))->send();     break;
+                case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
+                case 5:  ((IRLgAc*)id(ac))->send();          break;
+                case 6:  ((IRSamsungAc*)id(ac))->send();     break;
+                case 7:  ((IRToshibaAC*)id(ac))->send();     break;
+                case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
+                case 9:  ((IRHitachiAc*)id(ac))->send();     break;
+                case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
+                case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
+                case 12: ((IRHaierAC*)id(ac))->send();       break;
+                case 13: ((IRTcl112Ac*)id(ac))->send();      break;
+                case 14: ((IRCoolixAC*)id(ac))->send();      break;
+                case 15: ((IRCarrierAc64*)id(ac))->send();   break;
+                case 16: ((IRSharpAc*)id(ac))->send();       break;
+                case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
+              }
+            }
+
+# =============================================================================
+# 辅助宏：根据协议 ID 设置模式
+# =============================================================================
+# 说明：不同协议的模式枚举值不同，此处按通用映射：
+#   Auto=0, Cool=1, Dry=2, Fan=3, Heat=4
+# 各协议在 setMode 调用时使用其自身的枚举值
+
+# =============================================================================
+# 开关类实体
+# =============================================================================
+switch:
+  # --- 电源 ---
+  - platform: template
+    id: ac_power
+    name: "Power"
+    icon: "mdi:power"
+    web_server:
+      sorting_weight: 0
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lambda: |-
+          // 通用 on() → 各协议类都继承自 IRsend，多数有 on() 虚函数
+          if (id(ac)) {
+            switch (id(ac_protocol).active_index().value_or(0)) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->on();  break;
+              case 1:  ((IRGreeAC*)id(ac))->on();        break;
+              case 2:  ((IRMideaAC*)id(ac))->on();       break;
+              case 3:  ((IRDaikinESP*)id(ac))->on();     break;
+              case 4:  ((IRPanasonicAc*)id(ac))->on();   break;
+              case 5:  ((IRLgAc*)id(ac))->on();          break;
+              case 6:  ((IRSamsungAc*)id(ac))->on();     break;
+              case 7:  ((IRToshibaAC*)id(ac))->on();     break;
+              case 8:  ((IRFujitsuAC*)id(ac))->on();     break;
+              case 9:  ((IRHitachiAc*)id(ac))->on();     break;
+              case 10: ((IRMitsubishiAC*)id(ac))->on();  break;
+              case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->on(); break;
+              case 13: ((IRTcl112Ac*)id(ac))->on();         break;
+              case 14: ((IRCoolixAC*)id(ac))->on();      break;
+              case 15: ((IRCarrierAc64*)id(ac))->on();     break;
+              case 16: ((IRSharpAc*)id(ac))->on();       break;
+              }
+            switch (id(ac_protocol).active_index().value_or(0)) {
+              switch (id(ac_protocol).active_index().value_or(0)) {
+                case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
+                case 1:  ((IRGreeAC*)id(ac))->send();        break;
+                case 2:  ((IRMideaAC*)id(ac))->send();       break;
+                case 3:  ((IRDaikinESP*)id(ac))->send();     break;
+                case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
+                case 5:  ((IRLgAc*)id(ac))->send();          break;
+                case 6:  ((IRSamsungAc*)id(ac))->send();     break;
+                case 7:  ((IRToshibaAC*)id(ac))->send();     break;
+                case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
+                case 9:  ((IRHitachiAc*)id(ac))->send();     break;
+                case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
+                case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
+                case 12: ((IRHaierAC*)id(ac))->send();       break;
+                case 13: ((IRTcl112Ac*)id(ac))->send();      break;
+                case 14: ((IRCoolixAC*)id(ac))->send();      break;
+                case 15: ((IRCarrierAc64*)id(ac))->send();   break;
+                case 16: ((IRSharpAc*)id(ac))->send();       break;
+                case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
+              }
+            };
+            ESP_LOGI("ac", "ON - Protocol: %s", id(ac_protocol).state.c_str());
+          }
+    turn_off_action:
+      - lambda: |-
+          if (id(ac)) {
+            switch (id(ac_protocol).active_index().value_or(0)) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->off();  break;
+              case 1:  ((IRGreeAC*)id(ac))->off();        break;
+              case 2:  ((IRMideaAC*)id(ac))->off();       break;
+              case 3:  ((IRDaikinESP*)id(ac))->off();     break;
+              case 4:  ((IRPanasonicAc*)id(ac))->off();   break;
+              case 5:  ((IRLgAc*)id(ac))->off();          break;
+              case 6:  ((IRSamsungAc*)id(ac))->off();     break;
+              case 7:  ((IRToshibaAC*)id(ac))->off();     break;
+              case 8:  ((IRFujitsuAC*)id(ac))->off();     break;
+              case 9:  ((IRHitachiAc*)id(ac))->off();     break;
+              case 10: ((IRMitsubishiAC*)id(ac))->off();  break;
+              case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->off(); break;
+              case 13: ((IRTcl112Ac*)id(ac))->off();         break;
+              case 14: ((IRCoolixAC*)id(ac))->off();      break;
+              case 15: ((IRCarrierAc64*)id(ac))->off();     break;
+              case 16: ((IRSharpAc*)id(ac))->off();       break;
+              }
+            switch (id(ac_protocol).active_index().value_or(0)) {
+              switch (id(ac_protocol).active_index().value_or(0)) {
+                case 0:  ((IRKelvinatorAC*)id(ac))->send();  break;
+                case 1:  ((IRGreeAC*)id(ac))->send();        break;
+                case 2:  ((IRMideaAC*)id(ac))->send();       break;
+                case 3:  ((IRDaikinESP*)id(ac))->send();     break;
+                case 4:  ((IRPanasonicAc*)id(ac))->send();   break;
+                case 5:  ((IRLgAc*)id(ac))->send();          break;
+                case 6:  ((IRSamsungAc*)id(ac))->send();     break;
+                case 7:  ((IRToshibaAC*)id(ac))->send();     break;
+                case 8:  ((IRFujitsuAC*)id(ac))->send();     break;
+                case 9:  ((IRHitachiAc*)id(ac))->send();     break;
+                case 10: ((IRMitsubishiAC*)id(ac))->send();  break;
+                case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->send(); break;
+                case 12: ((IRHaierAC*)id(ac))->send();       break;
+                case 13: ((IRTcl112Ac*)id(ac))->send();      break;
+                case 14: ((IRCoolixAC*)id(ac))->send();      break;
+                case 15: ((IRCarrierAc64*)id(ac))->send();   break;
+                case 16: ((IRSharpAc*)id(ac))->send();       break;
+                case 17: ((IRWhirlpoolAc*)id(ac))->send();   break;
+              }
+            };
+            auto call = id(ac_timed_off).make_call();
+            call.set_time("00:00:00");
+            call.perform();
+          }
+
+  # --- 水平扫风 ---
+  - platform: template
+    id: ac_swing_horizontal
+    name: "Horizontal swing"
+    icon: "mdi:swap-horizontal-bold"
+    web_server:
+      sorting_weight: 5
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setSwingHorizontal(true); break;
+              case 1:  ((IRGreeAC*)id(ac))->setSwingHorizontal(true);       break;
+              case 3:  ((IRDaikinESP*)id(ac))->setSwingHorizontal(true);    break;
+              case 4:  ((IRPanasonicAc*)id(ac))->setSwingHorizontal(true);  break;
+              case 9:  ((IRHitachiAc*)id(ac))->setSwingHorizontal(true);    break;
+              case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->setSwingHorizontal(true); break;
+              case 13: ((IRTcl112Ac*)id(ac))->setSwingHorizontal(true);        break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+    turn_off_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setSwingHorizontal(false); break;
+              case 1:  ((IRGreeAC*)id(ac))->setSwingHorizontal(false);       break;
+              case 3:  ((IRDaikinESP*)id(ac))->setSwingHorizontal(false);    break;
+              case 4:  ((IRPanasonicAc*)id(ac))->setSwingHorizontal(false);  break;
+              case 9:  ((IRHitachiAc*)id(ac))->setSwingHorizontal(false);    break;
+              case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->setSwingHorizontal(false); break;
+              case 13: ((IRTcl112Ac*)id(ac))->setSwingHorizontal(false);        break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+
+  # --- 灯光 ---
+  - platform: template
+    id: ac_light
+    name: "Light"
+    icon: "mdi:brightness-6"
+    web_server:
+      sorting_weight: 7
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setLight(true); break;
+              case 1:  ((IRGreeAC*)id(ac))->setLight(true);       break;
+              case 5:  ((IRLgAc*)id(ac))->setLight(true);         break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+    turn_off_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setLight(false); break;
+              case 1:  ((IRGreeAC*)id(ac))->setLight(false);       break;
+              case 5:  ((IRLgAc*)id(ac))->setLight(false);         break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+
+  # --- 静音 ---
+  - platform: template
+    id: ac_quiet
+    name: "Quiet"
+    icon: "mdi:volume-off"
+    web_server:
+      sorting_weight: 8
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setQuiet(true); break;
+              case 2:  ((IRMideaAC*)id(ac))->setQuiet(true);      break;
+              case 3:  ((IRDaikinESP*)id(ac))->setQuiet(true);    break;
+              case 6:  ((IRSamsungAc*)id(ac))->setQuiet(true);    break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+    turn_off_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setQuiet(false); break;
+              case 2:  ((IRMideaAC*)id(ac))->setQuiet(false);      break;
+              case 3:  ((IRDaikinESP*)id(ac))->setQuiet(false);    break;
+              case 6:  ((IRSamsungAc*)id(ac))->setQuiet(false);    break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+
+  # --- 强力 ---
+  - platform: template
+    id: ac_turbo
+    name: "Turbo"
+    icon: "mdi:speedometer"
+    web_server:
+      sorting_weight: 9
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setTurbo(true); break;
+              case 1:  ((IRGreeAC*)id(ac))->setTurbo(true);       break;
+              case 7:  ((IRToshibaAC*)id(ac))->setTurbo(true);    break;
+              case 16: ((IRSharpAc*)id(ac))->setTurbo(true);      break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+    turn_off_action:
+      - lambda: |-
+          if (id(ac)) {
+            int proto = id(ac_protocol).active_index().value_or(0);
+            switch (proto) {
+              case 0:  ((IRKelvinatorAC*)id(ac))->setTurbo(false); break;
+              case 1:  ((IRGreeAC*)id(ac))->setTurbo(false);       break;
+              case 7:  ((IRToshibaAC*)id(ac))->setTurbo(false);    break;
+              case 16: ((IRSharpAc*)id(ac))->setTurbo(false);      break;
+            }
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+
+  # --- XFan（仅 Kelvinator）---
+  - platform: template
+    id: ac_xfan
+    name: "XFan"
+    icon: "mdi:radiator"
+    web_server:
+      sorting_weight: 10
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    disabled_by_default: true
+    turn_on_action:
+      - lambda: |-
+          if (id(ac) && id(ac_protocol).active_index().value_or(0) == 0) {
+            ((IRKelvinatorAC*)id(ac))->setXFan(true);
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+    turn_off_action:
+      - lambda: |-
+          if (id(ac) && id(ac_protocol).active_index().value_or(0) == 0) {
+            ((IRKelvinatorAC*)id(ac))->setXFan(false);
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+
+  # --- 离子过滤（仅 Kelvinator）---
+  - platform: template
+    id: ac_ion_filter
+    name: "Ion filter"
+    icon: "mdi:electron-framework"
+    web_server:
+      sorting_weight: 11
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    disabled_by_default: true
+    turn_on_action:
+      - lambda: |-
+          if (id(ac) && id(ac_protocol).active_index().value_or(0) == 0) {
+            ((IRKelvinatorAC*)id(ac))->setIonFilter(true);
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+    turn_off_action:
+      - lambda: |-
+          if (id(ac) && id(ac_protocol).active_index().value_or(0) == 0) {
+            ((IRKelvinatorAC*)id(ac))->setIonFilter(false);
+            id(ac_apply_event).trigger("ac_conf_change");
+          }
+
+# =============================================================================
+# 数值类实体：温度 & 风速
+# =============================================================================
+number:
+  # --- 风扇转速 ---
+  - platform: template
+    id: ac_fan_speed
+    name: "Fan speed"
+    icon: "mdi:fan"
+    min_value: 1
+    max_value: 5
+    step: 1
+    web_server:
+      sorting_weight: 4
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            if (id(ac)) {
+              int proto = id(ac_protocol).active_index().value_or(0);
+              int spd = (int)id(ac_fan_speed).state;
+              switch (proto) {
+                case 0:  ((IRKelvinatorAC*)id(ac))->setFan(spd);          break;
+                case 1:  ((IRGreeAC*)id(ac))->setFan(spd);                break;
+                case 2:  ((IRMideaAC*)id(ac))->setFan(spd);               break;
+                case 3:  ((IRDaikinESP*)id(ac))->setFan(spd);             break;
+                case 4:  ((IRPanasonicAc*)id(ac))->setFan(spd);           break;
+                case 5:  ((IRLgAc*)id(ac))->setFan(spd);                  break;
+                case 6:  ((IRSamsungAc*)id(ac))->setFan(spd);             break;
+                case 7:  ((IRToshibaAC*)id(ac))->setFan(spd);             break;
+                case 8:  ((IRFujitsuAC*)id(ac))->setFanSpeed(spd);             break;
+                case 9:  ((IRHitachiAc*)id(ac))->setFan(spd);             break;
+                case 10: ((IRMitsubishiAC*)id(ac))->setFan(spd);          break;
+                case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->setFan(spd);     break;
+                case 12: ((IRHaierAC*)id(ac))->setFan(spd);               break;
+                case 13: ((IRTcl112Ac*)id(ac))->setFan(spd);                 break;
+                case 14: ((IRCoolixAC*)id(ac))->setFan(spd);              break;
+                case 15: ((IRCarrierAc64*)id(ac))->setFan(spd);             break;
+                case 16: ((IRSharpAc*)id(ac))->setFan(spd);               break;
+                case 17: ((IRWhirlpoolAc*)id(ac))->setFan(spd);           break;
+              }
+              id(ac_apply_event).trigger("ac_conf_change");
+            }
+
+  # --- 温度 ---
+  - platform: template
+    id: ac_temp
+    name: "Temperature"
+    icon: "mdi:thermometer"
+    min_value: 16
+    max_value: 30
+    step: 1
+    web_server:
+      sorting_weight: 3
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            if (id(ac)) {
+              int proto = id(ac_protocol).active_index().value_or(0);
+              int temp = (int)id(ac_temp).state;
+              switch (proto) {
+                case 0:  ((IRKelvinatorAC*)id(ac))->setTemp(temp);          break;
+                case 1:  ((IRGreeAC*)id(ac))->setTemp(temp);                break;
+                case 2:  ((IRMideaAC*)id(ac))->setTemp(temp);               break;
+                case 3:  ((IRDaikinESP*)id(ac))->setTemp(temp);             break;
+                case 4:  ((IRPanasonicAc*)id(ac))->setTemp(temp);           break;
+                case 5:  ((IRLgAc*)id(ac))->setTemp(temp);                  break;
+                case 6:  ((IRSamsungAc*)id(ac))->setTemp(temp);             break;
+                case 7:  ((IRToshibaAC*)id(ac))->setTemp(temp);             break;
+                case 8:  ((IRFujitsuAC*)id(ac))->setTemp(temp);             break;
+                case 9:  ((IRHitachiAc*)id(ac))->setTemp(temp);             break;
+                case 10: ((IRMitsubishiAC*)id(ac))->setTemp(temp);          break;
+                case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->setTemp(temp);     break;
+                case 12: ((IRHaierAC*)id(ac))->setTemp(temp);               break;
+                case 13: ((IRTcl112Ac*)id(ac))->setTemp(temp);                 break;
+                case 14: ((IRCoolixAC*)id(ac))->setTemp(temp);              break;
+                case 15: ((IRCarrierAc64*)id(ac))->setTemp(temp);             break;
+                case 16: ((IRSharpAc*)id(ac))->setTemp(temp);               break;
+                case 17: ((IRWhirlpoolAc*)id(ac))->setTemp(temp);           break;
+              }
+              id(ac_apply_event).trigger("ac_conf_change");
+            }
+
+# =============================================================================
+# 选择器类实体
+# =============================================================================
+select:
+  # ====== 协议选择（核心） ======
+  - platform: template
+    id: ac_protocol
+    name: "IR Protocol"
+    icon: "mdi:remote"
+    options:
+      - "Kelvinator (Gree/Sharp)"
+      - "Gree"
+      - "Midea"
+      - "Daikin"
+      - "Panasonic"
+      - "LG"
+      - "Samsung"
+      - "Toshiba"
+      - "Fujitsu"
+      - "Hitachi"
+      - "Mitsubishi Electric"
+      - "Mitsubishi Heavy"
+      - "Haier"
+      - "TCL"
+      - "Coolix (Beko/Midea)"
+      - "Carrier"
+      - "Sharp"
+      - "Whirlpool"
+    initial_option: "Kelvinator (Gree/Sharp)"
+    web_server:
+      sorting_weight: 99
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            ESP_LOGI("protocol", "Switching to: %s", id(ac_protocol).state.c_str());
+            // 销毁旧实例
+            if (id(ac)) { delete (IRsend*)id(ac); id(ac) = nullptr; }
+            // 创建新实例
+            switch (id(ac_protocol).active_index().value_or(0)) {
+              case 0:  id(ac) = new IRKelvinatorAC(id(ir_send_pin));     break;
+              case 1:  id(ac) = new IRGreeAC(id(ir_send_pin));           break;
+              case 2:  id(ac) = new IRMideaAC(id(ir_send_pin));          break;
+              case 3:  id(ac) = new IRDaikinESP(id(ir_send_pin));        break;
+              case 4:  id(ac) = new IRPanasonicAc(id(ir_send_pin));      break;
+              case 5:  id(ac) = new IRLgAc(id(ir_send_pin));             break;
+              case 6:  id(ac) = new IRSamsungAc(id(ir_send_pin));        break;
+              case 7:  id(ac) = new IRToshibaAC(id(ir_send_pin));        break;
+              case 8:  id(ac) = new IRFujitsuAC(id(ir_send_pin));        break;
+              case 9:  id(ac) = new IRHitachiAc(id(ir_send_pin));        break;
+              case 10: id(ac) = new IRMitsubishiAC(id(ir_send_pin));     break;
+              case 11: id(ac) = new IRMitsubishiHeavy152Ac(id(ir_send_pin)); break;
+              case 12: id(ac) = new IRHaierAC(id(ir_send_pin));          break;
+              case 13: id(ac) = new IRTcl112Ac(id(ir_send_pin));            break;
+              case 14: id(ac) = new IRCoolixAC(id(ir_send_pin));         break;
+              case 15: id(ac) = new IRCarrierAc64(id(ir_send_pin));        break;
+              case 16: id(ac) = new IRSharpAc(id(ir_send_pin));          break;
+              case 17: id(ac) = new IRWhirlpoolAc(id(ir_send_pin));      break;
+            }
+            ((IRsend*)id(ac))->begin();
+            ESP_LOGI("protocol", "Protocol switched OK");
+
+  # --- 模式 ---
+  - platform: template
+    id: ac_mode
+    name: "Mode"
+    icon: "mdi:order-bool-ascending-variant"
+    options:
+      - "Auto"
+      - "Cool"
+      - "Dry"
+      - "Fan"
+      - "Heat"
+    initial_option: "Auto"
+    web_server:
+      sorting_weight: 2
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            if (id(ac)) {
+              auto idx = id(ac_mode).active_index();
+              if (idx.has_value()) {
+                int proto = id(ac_protocol).active_index().value_or(0);
+                uint8_t m = (uint8_t)idx.value();
+                switch (proto) {
+                  case 0:  ((IRKelvinatorAC*)id(ac))->setMode(m);          break;
+                  case 1:  ((IRGreeAC*)id(ac))->setMode(m);                break;
+                  case 2:  ((IRMideaAC*)id(ac))->setMode(m);               break;
+                  case 3:  ((IRDaikinESP*)id(ac))->setMode(m);             break;
+                  case 4:  ((IRPanasonicAc*)id(ac))->setMode(m);           break;
+                  case 5:  ((IRLgAc*)id(ac))->setMode(m);                  break;
+                  case 6:  ((IRSamsungAc*)id(ac))->setMode(m);             break;
+                  case 7:  ((IRToshibaAC*)id(ac))->setMode(m);             break;
+                  case 8:  ((IRFujitsuAC*)id(ac))->setMode(m);             break;
+                  case 9:  ((IRHitachiAc*)id(ac))->setMode(m);             break;
+                  case 10: ((IRMitsubishiAC*)id(ac))->setMode(m);          break;
+                  case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->setMode(m);     break;
+                  case 12: ((IRHaierAC*)id(ac))->setMode(m);               break;
+                  case 13: ((IRTcl112Ac*)id(ac))->setMode(m);                 break;
+                  case 14: ((IRCoolixAC*)id(ac))->setMode(m);              break;
+                  case 15: ((IRCarrierAc64*)id(ac))->setMode(m);             break;
+                  case 16: ((IRSharpAc*)id(ac))->setMode(m);               break;
+                  case 17: ((IRWhirlpoolAc*)id(ac))->setMode(m);           break;
+                }
+                id(ac_apply_event).trigger("ac_conf_change");
+              }
+            }
+
+  # --- 垂直扫风 ---
+  - platform: template
+    id: ac_swing_vertical
+    name: "Vertical swing"
+    icon: "mdi:swap-vertical-bold"
+    options:
+      - "Off"
+      - "Auto"
+      - "Highest"
+      - "UpperMiddle"
+      - "Middle"
+      - "LowerMiddle"
+      - "Lowest"
+      - "LowAuto"
+      - "MiddleAuto"
+      - "HighAuto"
+    initial_option: "Auto"
+    web_server:
+      sorting_weight: 6
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            if (id(ac)) {
+              auto idx = id(ac_swing_vertical).active_index();
+              if (idx.has_value()) {
+                int proto = id(ac_protocol).active_index().value_or(0);
+                uint8_t pos = (uint8_t)idx.value();
+                bool swing = (pos == 1 || pos == 7 || pos == 8 || pos == 9);
+                switch (proto) {
+                  case 0:  ((IRKelvinatorAC*)id(ac))->setSwingVertical(swing, pos);    break;
+                  case 1:  ((IRGreeAC*)id(ac))->setSwingVertical(swing, pos);          break;
+                  case 3:  ((IRDaikinESP*)id(ac))->setSwingVertical(swing);            break;
+                  case 4:  ((IRPanasonicAc*)id(ac))->setSwingVertical(pos);            break;
+                  case 9:  ((IRHitachiAc*)id(ac))->setSwingVertical(swing);            break;
+                  case 11: ((IRMitsubishiHeavy152Ac*)id(ac))->setSwingVertical(pos);   break;
+                  case 13: ((IRTcl112Ac*)id(ac))->setSwingVertical(pos);               break;
+                }
+                id(ac_apply_event).trigger("ac_conf_change");
+              }
+            }
+
+# =============================================================================
+# SNTP 时间同步 & 定时关机
+# =============================================================================
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Asia/Shanghai
+    servers:
+      - ntp.ntsc.ac.cn
+      - ntp.aliyun.com
+      - time.windows.com
+    on_time:
+      - seconds: 0
+        minutes: /1
+        then:
+          lambda: |-
+            if (id(ac) && id(ac_off_time).is_valid() &&
+                id(sntp_time).now() >= id(ac_off_time)) {
+              if (id(ac_power).state) {
+                id(ac_power).turn_off();
+                ESP_LOGI("sntp", "A/C off at %s",
+                  id(sntp_time).now().strftime("%H:%M:%S").c_str());
+              }
+              auto call = id(ac_timed_off).make_call();
+              call.set_time("00:00:00");
+              call.perform();
+            }
+
+datetime:
+  - platform: template
+    id: ac_timed_off
+    name: "Timed off"
+    icon: "mdi:calendar-alert"
+    type: time
+    initial_value: "00:00:00"
+    web_server:
+      sorting_weight: 1
+    optimistic: yes
+    disabled_by_default: true
+    on_value:
+      then:
+        - lambda: |-
+            ESPTime time_set = id(ac_timed_off).state_as_esptime();
+            if (id(sntp_time).now().is_valid()) {
+              if (time_set.hour != 0 || time_set.minute != 0) {
+                id(ac_off_time) = id(sntp_time).now();
+                id(ac_off_time).hour += time_set.hour;
+                id(ac_off_time).minute += time_set.minute;
+                id(ac_off_time).second = 0;
+                if (id(ac_off_time).minute > 59) {
+                  id(ac_off_time).hour += 1;
+                  id(ac_off_time).minute -= 60;
+                }
+                if (id(ac_off_time).hour > 23) {
+                  id(ac_off_time).day_of_month += 1;
+                  id(ac_off_time).hour -= 24;
+                }
+                id(ac_off_time).recalc_timestamp_local();
+                ESP_LOGI("timed_off", "Set off at %s",
+                  id(ac_off_time).strftime("%m-%d %H:%M:%S").c_str());
+              } else {
+                id(ac_off_time).year = 0;
+                id(ac_off_time).month = 0;
+                id(ac_off_time).day_of_month = 0;
+                id(ac_off_time).hour = 0;
+                id(ac_off_time).minute = 0;
+                id(ac_off_time).second = 0;
+                id(ac_off_time).recalc_timestamp_local();
+              }
+            } else {
+              ESP_LOGW("timed_off", "SNTP not synced yet.");
+            }
